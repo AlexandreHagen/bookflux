@@ -1,11 +1,8 @@
 from __future__ import annotations
 
-import os
-import time
 from typing import Iterable, List
 
-from google import genai
-from google.genai import types
+from .providers.base import TranslatorProvider
 
 
 def chunk_text(text: str, max_chars: int) -> List[str]:
@@ -40,56 +37,17 @@ def chunk_text(text: str, max_chars: int) -> List[str]:
     return chunks
 
 
-class Translator:
+class TranslatorFacade:
     def __init__(
         self,
-        api_key: str | None = None,
-        model_name: str = "gemini-2.5-flash",
-        target_lang: str = "fr",
-        temperature: float = 0.2,
-        max_retries: int = 3,
+        provider: TranslatorProvider,
+        target_lang: str,
     ) -> None:
-        api_key = api_key or os.getenv("GEMINI_API_KEY")
-        if not api_key:
-            raise ValueError("Missing GEMINI_API_KEY.")
-
-        self.model_name = model_name
-        self.client = genai.Client(api_key=api_key)
+        self.provider = provider
         self.target_lang = target_lang
-        self.temperature = temperature
-        self.max_retries = max_retries
 
     def translate_chunk(self, text: str) -> str:
-        prompt = (
-            f"Translate the following text into {self.target_lang}. "
-            "Preserve structure, headings, and line breaks. "
-            "Do not add commentary or notes.\n\n"
-            f"TEXT:\n{text}"
-        )
-
-        for attempt in range(self.max_retries):
-            try:
-                response = self.client.models.generate_content(
-                    model=self.model_name,
-                    contents=prompt,
-                    config=types.GenerateContentConfig(temperature=self.temperature),
-                )
-                return (response.text or "").strip()
-            except Exception as exc:
-                message = str(exc).lower()
-                if "not found" in message or "404" in message:
-                    raise ValueError(
-                        f"Model '{self.model_name}' not found or unsupported. "
-                        "Run with --list-models to see available models for this key."
-                    ) from exc
-                if attempt == self.max_retries - 1:
-                    raise
-                time.sleep(2**attempt)
-
-        return ""
+        return self.provider.translate(text, self.target_lang)
 
     def translate_chunks(self, chunks: Iterable[str]) -> List[str]:
-        outputs: List[str] = []
-        for chunk in chunks:
-            outputs.append(self.translate_chunk(chunk))
-        return outputs
+        return [self.translate_chunk(chunk) for chunk in chunks]

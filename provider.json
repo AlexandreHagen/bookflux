@@ -1,0 +1,8 @@
+{
+  "provider": "lmstudio",
+  "model": "translategemma-4b-it",
+  "base_url": "http://localhost:1234/v1",
+  "timeout": 180,
+  "temperature": 0.2,
+  "max_retries": 3
+}
