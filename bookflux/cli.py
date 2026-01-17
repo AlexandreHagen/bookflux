@@ -1,28 +1,56 @@
 from __future__ import annotations
 
 import argparse
-import os
+import json
 import sys
 
-from google import genai
-
-from .layout_utils import TextBlock, extract_layout_blocks, write_pdf_layout
+from .providers import create_provider, list_providers
+from .layout_utils import (
+    TextBlock,
+    extract_layout_blocks,
+    merge_block_page_breaks,
+    write_pdf_layout,
+)
 from .output_utils import write_pdf, write_pdf_pages
-from .pdf_utils import extract_text
-from .translator import Translator, chunk_text
+from .pdf_utils import extract_text, merge_page_texts, normalize_page_texts
+from .translator import TranslatorFacade, chunk_text
 
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
-        description="Translate a PDF book using Gemini (default target: French)."
+        description="Translate a PDF book using an AI provider (default target: French)."
     )
     parser.add_argument("--input", help="Path to input PDF.")
     parser.add_argument("--output", help="Path to output PDF.")
     parser.add_argument("--lang", default="fr", help="Target language code.")
-    parser.add_argument("--model", default="gemini-2.5-flash", help="Gemini model name.")
+    parser.add_argument(
+        "--provider",
+        default=None,
+        help="AI provider name (e.g., gemini).",
+    )
+    parser.add_argument(
+        "--api-key",
+        default=None,
+        help="Provider API key (overrides environment variable).",
+    )
+    parser.add_argument(
+        "--base-url",
+        default=None,
+        help="Provider base URL (useful for local servers).",
+    )
+    parser.add_argument(
+        "--model",
+        default=None,
+        help="Provider model name (defaults to provider's default).",
+    )
+    parser.add_argument(
+        "--provider-config",
+        default=None,
+        help="Path to JSON config for provider settings.",
+    )
     parser.add_argument("--chunk-size", type=int, default=4000, help="Max chars per chunk.")
-    parser.add_argument("--temperature", type=float, default=0.2, help="Model temperature.")
-    parser.add_argument("--max-retries", type=int, default=3, help="Retries per chunk.")
+    parser.add_argument("--temperature", type=float, default=None, help="Model temperature.")
+    parser.add_argument("--max-retries", type=int, default=None, help="Retries per chunk.")
     parser.add_argument(
         "--max-chunks",
         type=int,
@@ -32,7 +60,12 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--list-models",
         action="store_true",
-        help="List available Gemini models for your API key and exit.",
+        help="List available models for the selected provider and exit.",
+    )
+    parser.add_argument(
+        "--list-providers",
+        action="store_true",
+        help="List available providers and exit.",
     )
     parser.add_argument(
         "--layout",
@@ -50,64 +83,120 @@ def build_parser() -> argparse.ArgumentParser:
     return parser
 
 
-def _supports_generate_content(model) -> bool:
-    methods = (
-        getattr(model, "supported_generation_methods", None)
-        or getattr(model, "supported_methods", None)
-        or getattr(model, "supported_actions", None)
+def _load_provider_config(path: str | None) -> dict:
+    if not path:
+        return {}
+    try:
+        with open(path, "r", encoding="utf-8") as handle:
+            data = json.load(handle)
+    except FileNotFoundError as exc:
+        raise ValueError(f"Provider config not found: {path}") from exc
+    if not isinstance(data, dict):
+        raise ValueError("Provider config must be a JSON object.")
+    return data
+
+
+def _get_config_value(config: dict, key: str, default):
+    value = config.get(key, None)
+    return default if value is None else value
+
+
+def _get_float(config: dict, key: str, default: float) -> float:
+    value = config.get(key, None)
+    if value is None:
+        return default
+    try:
+        return float(value)
+    except (TypeError, ValueError) as exc:
+        raise ValueError(f"Invalid float for '{key}' in provider config.") from exc
+
+
+def _get_int(config: dict, key: str, default: int) -> int:
+    value = config.get(key, None)
+    if value is None:
+        return default
+    try:
+        return int(value)
+    except (TypeError, ValueError) as exc:
+        raise ValueError(f"Invalid int for '{key}' in provider config.") from exc
+
+
+def list_models(
+    provider_name: str,
+    api_key: str | None,
+    model_name: str | None,
+    base_url: str | None,
+    temperature: float,
+    max_retries: int,
+) -> None:
+    provider = create_provider(
+        provider_name,
+        api_key=api_key,
+        model_name=model_name,
+        base_url=base_url,
+        temperature=temperature,
+        max_retries=max_retries,
     )
-    if not methods:
-        return False
-    normalized = [str(method).lower() for method in methods]
-    return any(
-        "generatecontent" in method or "generate_content" in method
-        for method in normalized
-    )
-
-
-def list_models() -> None:
-    api_key = os.getenv("GEMINI_API_KEY")
-    if not api_key:
-        raise ValueError("Missing GEMINI_API_KEY.")
-    client = genai.Client(api_key=api_key)
-    models = []
-    for model in client.models.list():
-        if not _supports_generate_content(model):
-            continue
-        name = getattr(model, "name", "")
-        if name.startswith("models/"):
-            name = name[len("models/") :]
-        if name:
-            models.append(name)
-
+    models = provider.list_models()
     if not models:
-        print("No models available for generateContent.", file=sys.stderr)
+        print("No models available for this provider.", file=sys.stderr)
         return
-
     for name in sorted(models):
         print(name)
 
 
 def main() -> None:
     args = build_parser().parse_args()
+    config = _load_provider_config(args.provider_config)
 
+    provider_name = args.provider or _get_config_value(config, "provider", "gemini")
+    api_key = args.api_key or config.get("api_key")
+    model_name = args.model or config.get("model")
+    base_url = args.base_url or config.get("base_url")
+    temperature = (
+        args.temperature
+        if args.temperature is not None
+        else _get_float(config, "temperature", 0.2)
+    )
+    max_retries = (
+        args.max_retries
+        if args.max_retries is not None
+        else _get_int(config, "max_retries", 3)
+    )
+
+    if args.list_providers:
+        for name in list_providers():
+            print(name)
+        return
     if args.list_models:
-        list_models()
+        list_models(
+            provider_name,
+            api_key,
+            model_name,
+            base_url,
+            temperature,
+            max_retries,
+        )
         return
     if not args.input or not args.output:
         raise ValueError("Missing required arguments: --input and --output.")
+
+    provider = create_provider(
+        provider_name,
+        api_key=api_key,
+        model_name=model_name,
+        base_url=base_url,
+        temperature=temperature,
+        max_retries=max_retries,
+    )
+    translator = TranslatorFacade(provider, target_lang=args.lang)
 
     if args.layout == "soft":
         if args.ocr:
             raise ValueError("Soft layout does not support OCR yet.")
 
         page_sizes, pages_blocks = extract_layout_blocks(args.input)
-        translator = Translator(
-            model_name=args.model,
-            target_lang=args.lang,
-            temperature=args.temperature,
-            max_retries=args.max_retries,
-        )
+        pages_blocks = merge_block_page_breaks(pages_blocks)
         translated_pages: list[list[TextBlock]] = []
         remaining_chunks = args.max_chunks if args.max_chunks > 0 else None
 
@@ -161,14 +250,9 @@ def main() -> None:
     page_texts = extract_text(
         args.input, use_ocr=args.ocr, ocr_lang=args.ocr_lang
     )
-    translator = Translator(
-        model_name=args.model,
-        target_lang=args.lang,
-        temperature=args.temperature,
-        max_retries=args.max_retries,
-    )
 
     if args.preserve_pages:
+        page_texts = normalize_page_texts(page_texts)
         translated_pages = []
         total_pages = len(page_texts)
         remaining_chunks = args.max_chunks if args.max_chunks > 0 else None
@@ -200,7 +284,7 @@ def main() -> None:
         write_pdf_pages(translated_pages, args.output)
         return
 
-    full_text = "\n\n".join(page_texts)
+    full_text = merge_page_texts(page_texts)
     chunks = chunk_text(full_text, args.chunk_size)
     if not chunks:
         raise ValueError("No text to translate.")

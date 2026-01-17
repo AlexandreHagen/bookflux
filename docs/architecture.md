@@ -163,3 +163,55 @@ flowchart LR
 - Plugin system (entry points) for external providers.
 - Translation cache per chunk.
 - Batch mode with provider rate limits.
+- Crash recovery and resume:
+  - Persist a job state (JSON/SQLite) with page/chunk progress and translations.
+  - Resume from the last successful chunk without re-translating.
+  - Rebuild the final PDF from stored translated chunks on resume.
+
+## Crash Recovery: Analysis and Plan
+
+### Analysis
+- Long-running translations are fragile; a single failure can waste time and cost.
+- PDF output is not safely appendable in a resumable way; rebuilding from saved chunks is safer.
+- A checkpoint must capture enough context to avoid mismatches (input hash, provider config).
+
+### Plan
+- Define a checkpoint schema (JSON or SQLite) with:
+  - input file hash, provider name, model, and translation settings
+  - page index, block/chunk index, and translated text
+- Add CLI flags:
+  - `--checkpoint PATH` to save progress
+  - `--resume` to skip completed work
+- On resume:
+  - load checkpoint, validate input hash/config
+  - continue from the last completed chunk
+  - rebuild output PDF from stored translations
+- Add tests for:
+  - checkpoint write/read
+  - resume skipping logic
+  - PDF rebuild from saved chunks
+
+## Layout Heuristics: Analysis and Plan
+
+### Analysis
+- Extracted PDF text often loses semantic structure (titles, paragraphs, footers).
+- Page breaks split sentences and hyphenation, causing unreadable translations.
+- Layout blocks need consistent styling to preserve visual hierarchy.
+
+### Plan
+- Define a layout classifier per line/block:
+  - heading (all caps, larger font size, short length)
+  - paragraph (sentence-like, mixed case)
+  - footer/page number (short, numeric, low y-position)
+- Normalize lines within blocks:
+  - merge soft line breaks when the next line starts lowercase
+  - keep explicit blank lines as hard paragraph breaks
+  - merge hyphenated words across line/page breaks by consuming only the next token
+- Preserve hierarchy in output:
+  - map headings to a larger font size and extra spacing
+  - keep paragraph spacing consistent
+  - avoid merging across detected footers/headers
+- Add tests for:
+  - heading detection and spacing
+  - page number/footer skipping
+  - hyphen merge with remainder preserved

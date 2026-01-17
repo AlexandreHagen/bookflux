@@ -1,7 +1,12 @@
 from reportlab.lib.pagesizes import letter
 from reportlab.pdfgen import canvas
 
-from bookflux.layout_utils import extract_layout_blocks, write_pdf_layout
+from bookflux.layout_utils import (
+    TextBlock,
+    extract_layout_blocks,
+    merge_block_page_breaks,
+    write_pdf_layout,
+)
 
 
 def _make_pdf(path: str, lines: list[str]) -> None:
@@ -42,3 +47,49 @@ def test_write_pdf_layout(tmp_path) -> None:
 
     assert output_path.exists()
     assert output_path.stat().st_size > 0
+
+
+def test_merge_block_page_breaks() -> None:
+    block1 = TextBlock(
+        text="hyphen-",
+        x0=0,
+        x1=100,
+        top=0,
+        bottom=10,
+        font_size=11,
+    )
+    block2 = TextBlock(
+        text="ated word.",
+        x0=0,
+        x1=100,
+        top=0,
+        bottom=10,
+        font_size=11,
+    )
+
+    merged = merge_block_page_breaks([[block1], [block2]])
+    assert merged[0][0].text.endswith("hyphenated")
+    assert merged[1][0].text.startswith("word.")
+
+
+def test_merge_block_page_breaks_skips_page_number() -> None:
+    block1 = TextBlock(
+        text="hyphen-",
+        x0=0,
+        x1=100,
+        top=0,
+        bottom=10,
+        font_size=11,
+    )
+    block2 = TextBlock(
+        text="12",
+        x0=0,
+        x1=100,
+        top=0,
+        bottom=10,
+        font_size=11,
+    )
+
+    merged = merge_block_page_breaks([[block1], [block2]])
+    assert merged[0][0].text == "hyphen-"
+    assert merged[1][0].text == "12"

@@ -9,6 +9,7 @@ import pdfplumber
 from reportlab.pdfbase.pdfmetrics import stringWidth
 from reportlab.pdfgen import canvas
 
+from .text_utils import merge_lines, should_merge_lines, split_first_token
 
 @dataclass(frozen=True)
 class TextLine:
@@ -289,3 +290,85 @@ def write_pdf_layout(
             c.showPage()
 
     c.save()
+
+
+def merge_block_page_breaks(pages: list[list[TextBlock]]) -> list[list[TextBlock]]:
+    updated = [list(page) for page in pages]
+
+    for page_index in range(len(updated) - 1):
+        current_page = updated[page_index]
+        next_page = updated[page_index + 1]
+        if not current_page or not next_page:
+            continue
+
+        last_block = current_page[-1]
+        first_block = next_page[0]
+
+        last_lines = last_block.text.splitlines()
+        next_lines = first_block.text.splitlines()
+        last_idx = _last_non_empty_index(last_lines)
+        next_idx = _first_non_empty_index(next_lines)
+        if last_idx is None or next_idx is None:
+            continue
+
+        last_line = last_lines[last_idx].rstrip()
+        next_line = next_lines[next_idx].lstrip()
+        if not last_line or not next_line:
+            continue
+        if not should_merge_lines(last_line, next_line):
+            continue
+
+        if last_line.endswith("-"):
+            fragment, remainder = split_first_token(next_line)
+            if not fragment:
+                continue
+            last_lines[last_idx] = merge_lines(last_line, fragment)
+            if remainder:
+                next_lines[next_idx] = remainder
+            else:
+                del next_lines[next_idx]
+        else:
+            continue
+
+        new_last_text = "\n".join(last_lines).strip("\n")
+        new_first_text = "\n".join(next_lines).strip("\n")
+
+        if new_last_text:
+            current_page[-1] = TextBlock(
+                text=new_last_text,
+                x0=last_block.x0,
+                x1=last_block.x1,
+                top=last_block.top,
+                bottom=last_block.bottom,
+                font_size=last_block.font_size,
+            )
+        else:
+            current_page.pop()
+
+        if new_first_text:
+            next_page[0] = TextBlock(
+                text=new_first_text,
+                x0=first_block.x0,
+                x1=first_block.x1,
+                top=first_block.top,
+                bottom=first_block.bottom,
+                font_size=first_block.font_size,
+            )
+        else:
+            next_page.pop(0)
+
+    return updated
+
+
+def _first_non_empty_index(lines: list[str]) -> int | None:
+    for idx, line in enumerate(lines):
+        if line.strip():
+            return idx
+    return None
+
+
+def _last_non_empty_index(lines: list[str]) -> int | None:
+    for idx in range(len(lines) - 1, -1, -1):
+        if lines[idx].strip():
+            return idx
+    return None
