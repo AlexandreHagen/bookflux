@@ -5,9 +5,7 @@ from reportlab.pdfbase.pdfmetrics import stringWidth
 from reportlab.pdfgen import canvas
 
 
-def _wrap_paragraph(
-    text: str, max_width: float, font_name: str, font_size: int
-) -> list[str]:
+def _wrap_paragraph(text: str, max_width: float, font_name: str, font_size: int) -> list[str]:
     words = text.split()
     if not words:
         return [""]
@@ -25,9 +23,7 @@ def _wrap_paragraph(
     return lines
 
 
-def _iter_render_lines(
-    text: str, max_width: float, font_name: str, font_size: int
-) -> list[str]:
+def _iter_render_lines(text: str, max_width: float, font_name: str, font_size: int) -> list[str]:
     lines: list[str] = []
     for paragraph in text.splitlines():
         if not paragraph.strip():
@@ -52,9 +48,7 @@ def write_pdf(
     c.setFont(font_name, font_size)
     y = height - margin
 
-    for line in _iter_render_lines(
-        text, width - 2 * margin, font_name, font_size
-    ):
+    for line in _iter_render_lines(text, width - 2 * margin, font_name, font_size):
         if y - line_height < margin:
             c.showPage()
             c.setFont(font_name, font_size)
@@ -91,9 +85,7 @@ def write_pdf_pages(
             c.setFont(font_name, font_size)
             y = height - margin
 
-        for line in _iter_render_lines(
-            page_text, width - 2 * margin, font_name, font_size
-        ):
+        for line in _iter_render_lines(page_text, width - 2 * margin, font_name, font_size):
             if y - line_height < margin:
                 c.showPage()
                 c.setFont(font_name, font_size)

@@ -64,10 +64,7 @@ def _supports_generate_content(model) -> bool:
     if not methods:
         return False
     normalized = [str(method).lower() for method in methods]
-    return any(
-        "generatecontent" in method or "generate_content" in method
-        for method in normalized
-    )
+    return any("generatecontent" in method or "generate_content" in method for method in normalized)
 
 
 register_provider("gemini", GeminiProvider)

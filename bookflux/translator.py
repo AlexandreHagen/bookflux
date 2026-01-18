@@ -1,13 +1,13 @@
 from __future__ import annotations
 
-from typing import Iterable, List
+from collections.abc import Iterable
 
 from .providers.base import TranslatorProvider
 
 
-def chunk_text(text: str, max_chars: int) -> List[str]:
+def chunk_text(text: str, max_chars: int) -> list[str]:
     paragraphs = [p for p in text.split("\n\n") if p.strip()]
-    chunks: List[str] = []
+    chunks: list[str] = []
     current = ""
 
     for para in paragraphs:
@@ -49,5 +49,5 @@ class TranslatorFacade:
     def translate_chunk(self, text: str) -> str:
         return self.provider.translate(text, self.target_lang)
 
-    def translate_chunks(self, chunks: Iterable[str]) -> List[str]:
+    def translate_chunks(self, chunks: Iterable[str]) -> list[str]:
         return [self.translate_chunk(chunk) for chunk in chunks]

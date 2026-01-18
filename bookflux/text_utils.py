@@ -14,10 +14,7 @@ def should_merge_lines(last_line: str, next_line: str) -> bool:
     if _starts_with_lowercase(next_line):
         return True
 
-    if _ends_sentence(last_line):
-        return False
-
-    return True
+    return not _ends_sentence(last_line)
 
 
 def merge_lines(last_line: str, next_line: str) -> str:
@@ -40,9 +37,7 @@ def _ends_sentence(line: str) -> bool:
         return False
     if clean[-1] in ".!?":
         return True
-    if len(clean) >= 2 and clean[-1] in "\"')]" and clean[-2] in ".!?":
-        return True
-    return False
+    return len(clean) >= 2 and clean[-1] in "\"')]" and clean[-2] in ".!?"
 
 
 def _starts_with_lowercase(line: str) -> bool:

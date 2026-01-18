@@ -36,6 +36,7 @@ def test_translate_retries_until_success(monkeypatch) -> None:
 
 def test_translate_raises_on_model_not_found(monkeypatch) -> None:
     monkeypatch.setattr(time, "sleep", lambda _: None)
+
     class NotFoundError(RuntimeError):
         status_code = 404
 
@@ -47,9 +48,7 @@ def test_translate_raises_on_model_not_found(monkeypatch) -> None:
 
 def test_translate_raises_after_max_retries(monkeypatch) -> None:
     monkeypatch.setattr(time, "sleep", lambda _: None)
-    provider = StubProvider(
-        responses=[RuntimeError("boom"), RuntimeError("boom")], max_retries=2
-    )
+    provider = StubProvider(responses=[RuntimeError("boom"), RuntimeError("boom")], max_retries=2)
 
     with pytest.raises(RuntimeError):
         provider.translate("Hello", "fr")
