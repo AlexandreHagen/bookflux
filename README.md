@@ -46,7 +46,7 @@ Example `provider.json`:
 {
   "provider": "ollama",
   "model": "llama3.1",
-  "base_url": "http://localhost:11434",
+  "base_url": "http://localhost:11434/v1",
   "temperature": 0.2,
   "timeout": 180,
   "max_retries": 3
@@ -82,7 +82,7 @@ python -m bookflux \
   --lang fr \
   --provider ollama \
   --model llama3.1 \
-  --base-url http://localhost:11434
+  --base-url http://localhost:11434/v1
 ```
 
 ### Use LM Studio (local)

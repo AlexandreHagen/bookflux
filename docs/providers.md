@@ -28,6 +28,16 @@ CLI
 
 You can still override defaults with CLI flags or `--provider-config`.
 
+## Alias Resolution Rules
+- Provider resolution order:
+  1) CLI / `--provider-config` values
+  2) Alias-specific environment variables
+  3) Alias defaults (base URL)
+- Alias env vars:
+  - `lmstudio`: `LMSTUDIO_MODEL`, `LMSTUDIO_API_KEY`, `LMSTUDIO_BASE_URL`
+  - `ollama`: `OLLAMA_MODEL`, `OLLAMA_API_KEY`, `OLLAMA_HOST`
+- Aliases always use OpenAI-compatible endpoints (`/v1/chat/completions`, `/v1/models`).
+
 ## Options Considered
 
 ### Option 1: OpenAI-compat only
