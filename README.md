@@ -12,7 +12,7 @@ Output is a clean, text-only PDF generated from the translated content.
 - Chunked translation for large documents (~200 pages)
 - Simple CLI workflow
 - Architecture notes in `docs/architecture.md`
-- Provider strategy notes in `docs/providers.md`
+- Provider notes in `docs/providers.md`
 - Performance notes in `docs/optimization.md`
 
 ## Requirements
@@ -158,7 +158,7 @@ python -m bookflux \
 - OCR requires system binaries: poppler (for `pdf2image`) and tesseract.
 - The output PDF does not preserve original layout or images.
 - With `--preserve-pages`, each input page starts on a new output page.
-- `--layout soft` preserves block positions but may shrink text to fit.
+- `--layout soft` preserves block positions but may truncate text if blocks are too small.
 - `--layout soft` does not support OCR.
 - For large files, expect multiple API calls and higher cost.
 - Local providers may require running servers (Ollama or LM Studio) before use.

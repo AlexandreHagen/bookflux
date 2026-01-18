@@ -38,8 +38,3 @@ Chunk 3: "Para B (slice 2)"
 - Fast and predictable, but not sentence-aware.
 - Very long paragraphs can be split mid-sentence.
 - Chunk size impacts latency and translation quality.
-
-## Future improvements (ideas)
-- Sentence-aware chunking (prefer ending at `.?!`).
-- Hard limits by token count for better provider control.
-- Optional overlap between chunks to reduce context loss.
