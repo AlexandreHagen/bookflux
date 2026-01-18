@@ -1,4 +1,4 @@
-from bookflux.providers import lmstudio, ollama, openai_compat
+from bookflux.providers import create_provider, openai_compat
 
 
 def test_ollama_generate_uses_expected_endpoint(monkeypatch) -> None:
@@ -13,7 +13,8 @@ def test_ollama_generate_uses_expected_endpoint(monkeypatch) -> None:
 
     monkeypatch.setattr(openai_compat, "post_json", fake_post_json)
 
-    provider = ollama.OllamaProvider(
+    provider = create_provider(
+        "ollama",
         model_name="llama3.1",
         base_url="http://localhost:11434",
     )
@@ -32,7 +33,7 @@ def test_ollama_list_models(monkeypatch) -> None:
         return {"data": [{"id": "m1"}, {"id": "m2"}]}
 
     monkeypatch.setattr(openai_compat, "get_json", fake_get_json)
-    provider = ollama.OllamaProvider(model_name="m1", base_url="http://localhost:11434")
+    provider = create_provider("ollama", model_name="m1", base_url="http://localhost:11434")
 
     assert provider.list_models() == ["m1", "m2"]
 
@@ -49,7 +50,8 @@ def test_lmstudio_generate_uses_expected_endpoint(monkeypatch) -> None:
 
     monkeypatch.setattr(openai_compat, "post_json", fake_post_json)
 
-    provider = lmstudio.LMStudioProvider(
+    provider = create_provider(
+        "lmstudio",
         model_name="local-model",
         base_url="http://localhost:1234/v1",
         api_key="token",
@@ -68,7 +70,7 @@ def test_lmstudio_list_models(monkeypatch) -> None:
         return {"data": [{"id": "m1"}, {"id": "m2"}]}
 
     monkeypatch.setattr(openai_compat, "get_json", fake_get_json)
-    provider = lmstudio.LMStudioProvider(model_name="m1", base_url="http://localhost:1234/v1")
+    provider = create_provider("lmstudio", model_name="m1", base_url="http://localhost:1234/v1")
 
     assert provider.list_models() == ["m1", "m2"]
 
