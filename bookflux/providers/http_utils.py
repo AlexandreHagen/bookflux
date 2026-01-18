@@ -6,7 +6,10 @@ import urllib.error
 import urllib.request
 
 
-def _truncate_error_body(body: str, limit: int = 1000) -> str:
+ERROR_BODY_LIMIT = 1000
+
+
+def _truncate_error_body(body: str, limit: int = ERROR_BODY_LIMIT) -> str:
     clean = body.strip()
     if len(clean) <= limit:
         return clean

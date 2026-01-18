@@ -81,14 +81,11 @@ def _filter_kwargs(provider_cls: Type[TranslatorProvider], kwargs: dict) -> dict
 def _apply_alias(alias: ProviderAlias, kwargs: dict) -> dict:
     resolved = dict(kwargs)
     for key, env_var in alias.env_map.items():
-        if resolved.get(key) is None:
+        if key not in resolved:
             value = os.getenv(env_var)
             if value is not None:
                 resolved[key] = value
     for key, default in alias.defaults.items():
-        if resolved.get(key) is None:
+        if key not in resolved:
             resolved[key] = default
-    for key in ("model_name", "api_key"):
-        if key in alias.env_map and resolved.get(key) is None:
-            resolved[key] = ""
     return resolved

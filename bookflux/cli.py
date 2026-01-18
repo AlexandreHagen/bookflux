@@ -50,6 +50,12 @@ def build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument("--chunk-size", type=int, default=4000, help="Max chars per chunk.")
     parser.add_argument("--temperature", type=float, default=None, help="Model temperature.")
+    parser.add_argument(
+        "--request-mode",
+        choices=["chat", "completion"],
+        default=None,
+        help="Request mode for OpenAI-compatible providers.",
+    )
     parser.add_argument("--max-retries", type=int, default=None, help="Retries per chunk.")
     parser.add_argument(
         "--timeout",
@@ -130,15 +136,20 @@ def list_models(
     temperature: float,
     max_retries: int,
     timeout: float,
+    request_mode: str | None,
 ) -> None:
     create_kwargs: dict[str, object] = {
-        "api_key": api_key,
-        "base_url": base_url,
         "temperature": temperature,
         "max_retries": max_retries,
         "timeout": timeout,
     }
-    if model_name:
+    if request_mode is not None:
+        create_kwargs["request_mode"] = request_mode
+    if api_key is not None:
+        create_kwargs["api_key"] = api_key
+    if base_url is not None:
+        create_kwargs["base_url"] = base_url
+    if model_name is not None:
         create_kwargs["model_name"] = model_name
     provider = create_provider(provider_name, **create_kwargs)
     models = provider.list_models()
@@ -155,7 +166,10 @@ def main() -> None:
 
     provider_name = args.provider or config.get("provider", "gemini")
     api_key = args.api_key or config.get("api_key")
-    model_name = args.model or config.get("model")
+    config_model_name = config.get("model_name")
+    if config_model_name is None:
+        config_model_name = config.get("model")
+    model_name = args.model or config_model_name
     base_url = args.base_url or config.get("base_url")
     temperature = (
         args.temperature
@@ -167,6 +181,7 @@ def main() -> None:
         if args.max_retries is not None
         else _get_int(config, "max_retries", 3)
     )
+    request_mode = args.request_mode or config.get("request_mode")
     timeout = (
         args.timeout
         if args.timeout is not None
@@ -186,20 +201,26 @@ def main() -> None:
             temperature,
             max_retries,
             timeout,
+            request_mode,
         )
         return
     if not args.input or not args.output:
         raise ValueError("Missing required arguments: --input and --output.")
 
-    provider = create_provider(
-        provider_name,
-        api_key=api_key,
-        model_name=model_name,
-        base_url=base_url,
-        temperature=temperature,
-        max_retries=max_retries,
-        timeout=timeout,
-    )
+    create_kwargs: dict[str, object] = {
+        "temperature": temperature,
+        "max_retries": max_retries,
+        "timeout": timeout,
+    }
+    if request_mode is not None:
+        create_kwargs["request_mode"] = request_mode
+    if api_key is not None:
+        create_kwargs["api_key"] = api_key
+    if base_url is not None:
+        create_kwargs["base_url"] = base_url
+    if model_name is not None:
+        create_kwargs["model_name"] = model_name
+    provider = create_provider(provider_name, **create_kwargs)
     translator = TranslatorFacade(provider, target_lang=args.lang)
 
     if args.layout == "soft":

@@ -2,11 +2,11 @@
 
 This repository standardizes on a single provider implementation: `openai-compat`.
 Local servers such as LM Studio and Ollama expose OpenAI-like APIs, so they can be
-handled through one adapter with simple aliases and defaults.
+handled through one adapter with provider presets (aliases) and defaults.
 
 ## Decision Summary
 - Keep **one core provider**: `openai-compat`.
-- Treat `lmstudio` and `ollama` as **aliases** that prefill defaults.
+- Treat `lmstudio` and `ollama` as **presets (aliases)** that prefill defaults.
 - Remove dedicated provider implementations to reduce maintenance.
 
 ## Quick Diagram (Alias Strategy)
@@ -27,6 +27,14 @@ CLI
 - `ollama`   -> `base_url = http://localhost:11434/v1`
 
 You can still override defaults with CLI flags or `--provider-config`.
+
+## Request Mode (Chat vs Completion)
+OpenAI-compatible providers can use either:
+- `chat` (default): `/v1/chat/completions`
+- `completion`: `/v1/completions`
+
+Use `completion` only if your model expects raw prompts instead of chat templates.
+Set it via `--request-mode completion` or in `provider.json`.
 
 ## Alias Resolution Rules
 - Provider resolution order:
