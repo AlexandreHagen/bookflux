@@ -9,9 +9,9 @@ def test_ollama_generate_uses_expected_endpoint(monkeypatch) -> None:
         captured["payload"] = payload
         captured["headers"] = headers
         captured["timeout"] = timeout
-        return {"response": "ok"}
+        return {"choices": [{"message": {"content": "ok"}}]}
 
-    monkeypatch.setattr(ollama, "post_json", fake_post_json)
+    monkeypatch.setattr(openai_compat, "post_json", fake_post_json)
 
     provider = ollama.OllamaProvider(
         model_name="llama3.1",
@@ -20,17 +20,18 @@ def test_ollama_generate_uses_expected_endpoint(monkeypatch) -> None:
     result = provider._generate("test prompt")
 
     assert result == "ok"
-    assert captured["url"] == "http://localhost:11434/api/generate"
+    assert captured["url"] == "http://localhost:11434/v1/chat/completions"
     assert captured["payload"]["model"] == "llama3.1"
     assert captured["payload"]["stream"] is False
+    assert captured["payload"]["messages"][0]["content"] == "test prompt"
 
 
 def test_ollama_list_models(monkeypatch) -> None:
     def fake_get_json(url, headers=None, timeout=None):
-        assert url == "http://localhost:11434/api/tags"
-        return {"models": [{"name": "m1"}, {"name": "m2"}]}
+        assert url == "http://localhost:11434/v1/models"
+        return {"data": [{"id": "m1"}, {"id": "m2"}]}
 
-    monkeypatch.setattr(ollama, "get_json", fake_get_json)
+    monkeypatch.setattr(openai_compat, "get_json", fake_get_json)
     provider = ollama.OllamaProvider(model_name="m1", base_url="http://localhost:11434")
 
     assert provider.list_models() == ["m1", "m2"]
@@ -46,7 +47,7 @@ def test_lmstudio_generate_uses_expected_endpoint(monkeypatch) -> None:
         captured["timeout"] = timeout
         return {"choices": [{"message": {"content": "ok"}}]}
 
-    monkeypatch.setattr(lmstudio, "post_json", fake_post_json)
+    monkeypatch.setattr(openai_compat, "post_json", fake_post_json)
 
     provider = lmstudio.LMStudioProvider(
         model_name="local-model",
@@ -66,7 +67,7 @@ def test_lmstudio_list_models(monkeypatch) -> None:
         assert url == "http://localhost:1234/v1/models"
         return {"data": [{"id": "m1"}, {"id": "m2"}]}
 
-    monkeypatch.setattr(lmstudio, "get_json", fake_get_json)
+    monkeypatch.setattr(openai_compat, "get_json", fake_get_json)
     provider = lmstudio.LMStudioProvider(model_name="m1", base_url="http://localhost:1234/v1")
 
     assert provider.list_models() == ["m1", "m2"]

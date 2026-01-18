@@ -12,8 +12,16 @@ _REGISTRY: dict[str, Type[TranslatorProvider]] = {}
 def register_provider(name: str, provider: Type[TranslatorProvider]) -> None:
     key = name.strip().lower()
     if key in _REGISTRY:
+        existing = _REGISTRY[key]
+        if existing is provider:
+            return
         raise ValueError(f"Provider '{key}' is already registered.")
     _REGISTRY[key] = provider
+
+
+def unregister_provider(name: str) -> None:
+    key = name.strip().lower()
+    _REGISTRY.pop(key, None)
 
 
 def create_provider(name: str, **kwargs) -> TranslatorProvider:

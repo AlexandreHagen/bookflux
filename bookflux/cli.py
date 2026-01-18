@@ -52,6 +52,12 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--temperature", type=float, default=None, help="Model temperature.")
     parser.add_argument("--max-retries", type=int, default=None, help="Retries per chunk.")
     parser.add_argument(
+        "--timeout",
+        type=float,
+        default=None,
+        help="HTTP timeout in seconds for provider requests.",
+    )
+    parser.add_argument(
         "--max-chunks",
         type=int,
         default=0,
@@ -96,11 +102,6 @@ def _load_provider_config(path: str | None) -> dict:
     return data
 
 
-def _get_config_value(config: dict, key: str, default):
-    value = config.get(key, None)
-    return default if value is None else value
-
-
 def _get_float(config: dict, key: str, default: float) -> float:
     value = config.get(key, None)
     if value is None:
@@ -128,15 +129,18 @@ def list_models(
     base_url: str | None,
     temperature: float,
     max_retries: int,
+    timeout: float,
 ) -> None:
-    provider = create_provider(
-        provider_name,
-        api_key=api_key,
-        model_name=model_name,
-        base_url=base_url,
-        temperature=temperature,
-        max_retries=max_retries,
-    )
+    create_kwargs: dict[str, object] = {
+        "api_key": api_key,
+        "base_url": base_url,
+        "temperature": temperature,
+        "max_retries": max_retries,
+        "timeout": timeout,
+    }
+    if model_name:
+        create_kwargs["model_name"] = model_name
+    provider = create_provider(provider_name, **create_kwargs)
     models = provider.list_models()
     if not models:
         print("No models available for this provider.", file=sys.stderr)
@@ -149,7 +153,7 @@ def main() -> None:
     args = build_parser().parse_args()
     config = _load_provider_config(args.provider_config)
 
-    provider_name = args.provider or _get_config_value(config, "provider", "gemini")
+    provider_name = args.provider or config.get("provider", "gemini")
     api_key = args.api_key or config.get("api_key")
     model_name = args.model or config.get("model")
     base_url = args.base_url or config.get("base_url")
@@ -162,6 +166,11 @@ def main() -> None:
         args.max_retries
         if args.max_retries is not None
         else _get_int(config, "max_retries", 3)
+    )
+    timeout = (
+        args.timeout
+        if args.timeout is not None
+        else _get_float(config, "timeout", 60.0)
     )
 
     if args.list_providers:
@@ -176,6 +185,7 @@ def main() -> None:
             base_url,
             temperature,
             max_retries,
+            timeout,
         )
         return
     if not args.input or not args.output:
@@ -188,6 +198,7 @@ def main() -> None:
         base_url=base_url,
         temperature=temperature,
         max_retries=max_retries,
+        timeout=timeout,
     )
     translator = TranslatorFacade(provider, target_lang=args.lang)
 

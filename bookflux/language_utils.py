@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import logging
+
 from langcodes import Language
 
 
@@ -12,7 +14,10 @@ def language_display_name(code: str) -> str:
         if hasattr(language, "is_valid") and not language.is_valid():
             return code
         name = language.display_name("en")
-    except Exception:
+    except Exception as exc:
+        logging.getLogger(__name__).debug(
+            "Failed to resolve language code '%s'.", clean, exc_info=exc
+        )
         return code
     if not name:
         return code
