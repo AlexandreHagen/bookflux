@@ -21,12 +21,19 @@ class OpenAICompatProvider(BaseProvider):
         timeout: float = 60,
         max_retries: int = 3,
     ) -> None:
-        model_name = model_name or os.getenv(self.ENV_MODEL) or ""
+        if model_name is None:
+            model_name = os.getenv(self.ENV_MODEL) or ""
         super().__init__(model_name, temperature=temperature, max_retries=max_retries)
         self.base_url = _normalize_base_url(
-            base_url or os.getenv(self.ENV_BASE_URL) or "http://localhost:1234/v1"
+            base_url
+            if base_url is not None
+            else os.getenv(self.ENV_BASE_URL) or "http://localhost:1234/v1"
         )
-        self.api_key = api_key or os.getenv(self.ENV_API_KEY) or os.getenv("OPENAI_API_KEY")
+        self.api_key = (
+            api_key
+            if api_key is not None
+            else os.getenv(self.ENV_API_KEY) or os.getenv("OPENAI_API_KEY")
+        )
         self.timeout = timeout
 
     def _generate(self, prompt: str) -> str:

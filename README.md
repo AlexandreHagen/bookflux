@@ -62,6 +62,7 @@ python -m bookflux \
   --lang fr \
   --provider-config provider.json
 ```
+You can override the config timeout with `--timeout 180`.
 
 ### List available providers
 ```bash

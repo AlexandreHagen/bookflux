@@ -20,13 +20,19 @@ class GeminiProvider(BaseProvider):
         temperature: float = 0.2,
         max_retries: int = 3,
     ) -> None:
-        api_key = api_key or os.getenv(self.ENV_API_KEY)
-        if not api_key:
-            raise ValueError("Missing GEMINI_API_KEY.")
-
+        self._api_key = api_key or os.getenv(self.ENV_API_KEY)
         model_name = model_name or self.DEFAULT_MODEL
         super().__init__(model_name, temperature=temperature, max_retries=max_retries)
-        self.client = genai.Client(api_key=api_key)
+        self._client: genai.Client | None = None
+
+    @property
+    def client(self) -> genai.Client:
+        if self._client is None:
+            api_key = self._api_key or os.getenv(self.ENV_API_KEY)
+            if not api_key:
+                raise ValueError("Missing GEMINI_API_KEY.")
+            self._client = genai.Client(api_key=api_key)
+        return self._client
 
     def _generate(self, prompt: str) -> str:
         response = self.client.models.generate_content(

@@ -6,6 +6,13 @@ import urllib.error
 import urllib.request
 
 
+def _truncate_error_body(body: str, limit: int = 1000) -> str:
+    clean = body.strip()
+    if len(clean) <= limit:
+        return clean
+    return f"{clean[:limit]}... [truncated]"
+
+
 def get_json(
     url: str, headers: dict[str, str] | None = None, timeout: float = 30
 ) -> dict:
@@ -15,7 +22,7 @@ def get_json(
             payload = response.read().decode("utf-8")
     except urllib.error.HTTPError as exc:
         body = exc.read().decode("utf-8") if exc.fp else ""
-        raise RuntimeError(f"HTTP {exc.code}: {body}") from exc
+        raise RuntimeError(f"HTTP {exc.code}: {_truncate_error_body(body)}") from exc
     except socket.timeout as exc:
         raise RuntimeError(f"Request to {url} timed out after {timeout}s.") from exc
     except urllib.error.URLError as exc:
@@ -41,7 +48,9 @@ def post_json(
             body = response.read().decode("utf-8")
     except urllib.error.HTTPError as exc:
         error_body = exc.read().decode("utf-8") if exc.fp else ""
-        raise RuntimeError(f"HTTP {exc.code}: {error_body}") from exc
+        raise RuntimeError(
+            f"HTTP {exc.code}: {_truncate_error_body(error_body)}"
+        ) from exc
     except socket.timeout as exc:
         raise RuntimeError(f"Request to {url} timed out after {timeout}s.") from exc
     except urllib.error.URLError as exc:

@@ -2,15 +2,11 @@ from __future__ import annotations
 
 import os
 
-from .base import BaseProvider
-from .http_utils import get_json, post_json
+from .openai_compat import OpenAICompatProvider
 from .registry import register_provider
 
 
-class OllamaProvider(BaseProvider):
-    ENV_HOST = "OLLAMA_HOST"
-    ENV_MODEL = "OLLAMA_MODEL"
-
+class OllamaProvider(OpenAICompatProvider):
     def __init__(
         self,
         model_name: str | None = None,
@@ -20,30 +16,20 @@ class OllamaProvider(BaseProvider):
         timeout: float = 60,
         max_retries: int = 3,
     ) -> None:
-        model_name = model_name or os.getenv(self.ENV_MODEL) or ""
-        super().__init__(model_name, temperature=temperature, max_retries=max_retries)
-        self.base_url = (
-            base_url or os.getenv(self.ENV_HOST) or "http://localhost:11434"
-        ).rstrip("/")
-        self.timeout = timeout
-
-    def _generate(self, prompt: str) -> str:
-        url = f"{self.base_url}/api/generate"
-        payload = {
-            "model": self.model_name,
-            "prompt": prompt,
-            "stream": False,
-            "options": {"temperature": self.temperature},
-        }
-        data = post_json(url, payload, timeout=self.timeout)
-        return data.get("response", "")
-
-    def list_models(self) -> list[str]:
-        url = f"{self.base_url}/api/tags"
-        data = get_json(url, timeout=self.timeout)
-        models = data.get("models", [])
-        names = [model.get("name", "") for model in models]
-        return sorted([name for name in names if name])
+        if model_name is None:
+            model_name = os.getenv("OLLAMA_MODEL") or ""
+        if api_key is None:
+            api_key = os.getenv("OLLAMA_API_KEY")
+        if base_url is None:
+            base_url = os.getenv("OLLAMA_HOST") or "http://localhost:11434"
+        super().__init__(
+            model_name=model_name,
+            api_key=api_key,
+            base_url=base_url,
+            temperature=temperature,
+            timeout=timeout,
+            max_retries=max_retries,
+        )
 
 
 register_provider("ollama", OllamaProvider)
