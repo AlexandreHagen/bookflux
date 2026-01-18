@@ -1,9 +1,9 @@
 from __future__ import annotations
 
+import sys
+from collections.abc import Iterable
 from dataclasses import dataclass
 from statistics import median
-import sys
-from typing import Iterable
 
 import pdfplumber
 from reportlab.pdfbase.pdfmetrics import stringWidth
@@ -16,6 +16,7 @@ from .text_utils import (
     should_merge_lines,
     split_first_token,
 )
+
 
 @dataclass(frozen=True)
 class TextLine:
@@ -110,8 +111,8 @@ def _lines_to_blocks(lines: list[TextLine]) -> list[TextBlock]:
     if not lines:
         return []
 
-    lines_sorted = sorted(lines, key=lambda l: (l.top, l.x0))
-    line_heights = [max(l.bottom - l.top, 1.0) for l in lines_sorted]
+    lines_sorted = sorted(lines, key=lambda line: (line.top, line.x0))
+    line_heights = [max(line.bottom - line.top, 1.0) for line in lines_sorted]
     gap_threshold = _median(line_heights, default=12.0) * 1.5
 
     blocks: list[list[TextLine]] = []
@@ -128,16 +129,14 @@ def _lines_to_blocks(lines: list[TextLine]) -> list[TextBlock]:
 
     result: list[TextBlock] = []
     for block_lines in blocks:
-        text = "\n".join(l.text for l in block_lines if l.text)
-        x0 = min(l.x0 for l in block_lines)
-        x1 = max(l.x1 for l in block_lines)
-        top = min(l.top for l in block_lines)
-        bottom = max(l.bottom for l in block_lines)
-        font_size = _median([l.size for l in block_lines], default=11.0)
+        text = "\n".join(line.text for line in block_lines if line.text)
+        x0 = min(line.x0 for line in block_lines)
+        x1 = max(line.x1 for line in block_lines)
+        top = min(line.top for line in block_lines)
+        bottom = max(line.bottom for line in block_lines)
+        font_size = _median([line.size for line in block_lines], default=11.0)
         result.append(
-            TextBlock(
-                text=text, x0=x0, x1=x1, top=top, bottom=bottom, font_size=font_size
-            )
+            TextBlock(text=text, x0=x0, x1=x1, top=top, bottom=bottom, font_size=font_size)
         )
 
     return result
@@ -170,9 +169,7 @@ def extract_layout_blocks(
     return page_sizes, pages_blocks
 
 
-def _split_word(
-    word: str, max_width: float, font_name: str, font_size: float
-) -> list[str]:
+def _split_word(word: str, max_width: float, font_name: str, font_size: float) -> list[str]:
     if stringWidth(word, font_name, font_size) <= max_width:
         return [word]
 
@@ -190,9 +187,7 @@ def _split_word(
     return parts
 
 
-def _wrap_paragraph(
-    text: str, max_width: float, font_name: str, font_size: float
-) -> list[str]:
+def _wrap_paragraph(text: str, max_width: float, font_name: str, font_size: float) -> list[str]:
     words = text.split()
     if not words:
         return [""]
@@ -213,9 +208,7 @@ def _wrap_paragraph(
     return lines
 
 
-def _wrap_text(
-    text: str, max_width: float, font_name: str, font_size: float
-) -> list[str]:
+def _wrap_text(text: str, max_width: float, font_name: str, font_size: float) -> list[str]:
     lines: list[str] = []
     for paragraph in text.splitlines():
         if not paragraph.strip():

@@ -4,7 +4,6 @@ import argparse
 import json
 import sys
 
-from .providers import create_provider, list_providers
 from .layout_utils import (
     TextBlock,
     extract_layout_blocks,
@@ -13,6 +12,7 @@ from .layout_utils import (
 )
 from .output_utils import write_pdf, write_pdf_pages
 from .pdf_utils import extract_text, merge_page_texts, normalize_page_texts
+from .providers import create_provider, list_providers
 from .translator import TranslatorFacade, chunk_text
 
 
@@ -99,7 +99,7 @@ def _load_provider_config(path: str | None) -> dict:
     if not path:
         return {}
     try:
-        with open(path, "r", encoding="utf-8") as handle:
+        with open(path, encoding="utf-8") as handle:
             data = json.load(handle)
     except FileNotFoundError as exc:
         raise ValueError(f"Provider config not found: {path}") from exc
@@ -109,7 +109,7 @@ def _load_provider_config(path: str | None) -> dict:
 
 
 def _get_float(config: dict, key: str, default: float) -> float:
-    value = config.get(key, None)
+    value = config.get(key)
     if value is None:
         return default
     try:
@@ -119,7 +119,7 @@ def _get_float(config: dict, key: str, default: float) -> float:
 
 
 def _get_int(config: dict, key: str, default: int) -> int:
-    value = config.get(key, None)
+    value = config.get(key)
     if value is None:
         return default
     try:
@@ -172,21 +172,13 @@ def main() -> None:
     model_name = args.model or config_model_name
     base_url = args.base_url or config.get("base_url")
     temperature = (
-        args.temperature
-        if args.temperature is not None
-        else _get_float(config, "temperature", 0.2)
+        args.temperature if args.temperature is not None else _get_float(config, "temperature", 0.2)
     )
     max_retries = (
-        args.max_retries
-        if args.max_retries is not None
-        else _get_int(config, "max_retries", 3)
+        args.max_retries if args.max_retries is not None else _get_int(config, "max_retries", 3)
     )
     request_mode = args.request_mode or config.get("request_mode")
-    timeout = (
-        args.timeout
-        if args.timeout is not None
-        else _get_float(config, "timeout", 60.0)
-    )
+    timeout = args.timeout if args.timeout is not None else _get_float(config, "timeout", 60.0)
 
     if args.list_providers:
         for name in list_providers():
@@ -279,9 +271,7 @@ def main() -> None:
         write_pdf_layout(translated_pages, page_sizes, args.output)
         return
 
-    page_texts = extract_text(
-        args.input, use_ocr=args.ocr, ocr_lang=args.ocr_lang
-    )
+    page_texts = extract_text(args.input, use_ocr=args.ocr, ocr_lang=args.ocr_lang)
 
     if args.preserve_pages:
         page_texts = normalize_page_texts(page_texts)

@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from typing import List
-
 import pdfplumber
 
 from .text_utils import (
@@ -13,13 +11,14 @@ from .text_utils import (
     split_first_token,
 )
 
-def extract_text(pdf_path: str, use_ocr: bool = False, ocr_lang: str = "eng") -> List[str]:
+
+def extract_text(pdf_path: str, use_ocr: bool = False, ocr_lang: str = "eng") -> list[str]:
     if use_ocr:
         from .ocr_utils import ocr_pdf
 
         return ocr_pdf(pdf_path, ocr_lang=ocr_lang)
 
-    page_texts: List[str] = []
+    page_texts: list[str] = []
     with pdfplumber.open(pdf_path) as pdf:
         for page in pdf.pages:
             page_texts.append(page.extract_text() or "")
@@ -30,7 +29,7 @@ def extract_text(pdf_path: str, use_ocr: bool = False, ocr_lang: str = "eng") ->
     return page_texts
 
 
-def merge_page_texts(page_texts: List[str]) -> str:
+def merge_page_texts(page_texts: list[str]) -> str:
     lines: list[str] = []
     for text in page_texts:
         lines.extend(text.replace("\r\n", "\n").split("\n"))
@@ -41,7 +40,7 @@ def merge_page_texts(page_texts: List[str]) -> str:
     return "\n".join(merged).strip("\n")
 
 
-def normalize_page_texts(page_texts: List[str]) -> List[str]:
+def normalize_page_texts(page_texts: list[str]) -> list[str]:
     pages = [_merge_lines_in_text(text) for text in page_texts]
     lines_by_page = [page.split("\n") for page in pages]
 
@@ -110,4 +109,3 @@ def _merge_lines(lines: list[str]) -> list[str]:
         merged.append(current)
         i += 1
     return merged
-

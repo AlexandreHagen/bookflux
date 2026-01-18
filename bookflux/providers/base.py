@@ -57,9 +57,7 @@ class BaseProvider(TranslatorProvider):
         if "model" in message and "not found" in message:
             return True
         status = getattr(exc, "status_code", None) or getattr(exc, "status", None)
-        if status == 404:
-            return True
-        return False
+        return status == 404
 
     @abstractmethod
     def _generate(self, prompt: str) -> str:

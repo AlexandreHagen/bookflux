@@ -25,6 +25,10 @@ python -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
 ```
+Install dev tools:
+```bash
+pip install -r requirements-dev.txt
+```
 
 ## Usage
 ```bash
@@ -72,6 +76,12 @@ python -m bookflux --list-providers
 ### List available models
 ```bash
 python -m bookflux --list-models --provider gemini
+```
+
+### Lint and format
+```bash
+ruff check .
+ruff format .
 ```
 
 ### Use Ollama (local)
