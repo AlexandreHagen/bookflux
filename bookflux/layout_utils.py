@@ -9,7 +9,13 @@ import pdfplumber
 from reportlab.pdfbase.pdfmetrics import stringWidth
 from reportlab.pdfgen import canvas
 
-from .text_utils import merge_lines, should_merge_lines, split_first_token
+from .text_utils import (
+    first_non_empty_index,
+    last_non_empty_index,
+    merge_lines,
+    should_merge_lines,
+    split_first_token,
+)
 
 @dataclass(frozen=True)
 class TextLine:
@@ -306,8 +312,8 @@ def merge_block_page_breaks(pages: list[list[TextBlock]]) -> list[list[TextBlock
 
         last_lines = last_block.text.splitlines()
         next_lines = first_block.text.splitlines()
-        last_idx = _last_non_empty_index(last_lines)
-        next_idx = _first_non_empty_index(next_lines)
+        last_idx = last_non_empty_index(last_lines)
+        next_idx = first_non_empty_index(next_lines)
         if last_idx is None or next_idx is None:
             continue
 
@@ -328,6 +334,7 @@ def merge_block_page_breaks(pages: list[list[TextBlock]]) -> list[list[TextBlock
             else:
                 del next_lines[next_idx]
         else:
+            # Only merge hyphenated page breaks to avoid reshaping page layout.
             continue
 
         new_last_text = "\n".join(last_lines).strip("\n")
@@ -358,17 +365,3 @@ def merge_block_page_breaks(pages: list[list[TextBlock]]) -> list[list[TextBlock
             next_page.pop(0)
 
     return updated
-
-
-def _first_non_empty_index(lines: list[str]) -> int | None:
-    for idx, line in enumerate(lines):
-        if line.strip():
-            return idx
-    return None
-
-
-def _last_non_empty_index(lines: list[str]) -> int | None:
-    for idx in range(len(lines) - 1, -1, -1):
-        if lines[idx].strip():
-            return idx
-    return None

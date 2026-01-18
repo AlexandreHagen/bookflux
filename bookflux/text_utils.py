@@ -56,17 +56,13 @@ def _looks_like_heading(line: str) -> bool:
     letters = [ch for ch in line if ch.isalpha()]
     if len(letters) < 4:
         return False
-    if not line.isupper():
+    if not all(ch.isupper() for ch in letters):
         return False
     words = line.split()
     return len(words) <= 8
 
 
 def split_first_token(line: str) -> tuple[str, str]:
-    return _split_first_token(line)
-
-
-def _split_first_token(line: str) -> tuple[str, str]:
     clean = line.lstrip()
     if not clean:
         return "", ""
@@ -74,3 +70,17 @@ def _split_first_token(line: str) -> tuple[str, str]:
     if len(parts) == 1:
         return parts[0], ""
     return parts[0], parts[1]
+
+
+def first_non_empty_index(lines: list[str]) -> int | None:
+    for idx, line in enumerate(lines):
+        if line.strip():
+            return idx
+    return None
+
+
+def last_non_empty_index(lines: list[str]) -> int | None:
+    for idx in range(len(lines) - 1, -1, -1):
+        if lines[idx].strip():
+            return idx
+    return None

@@ -5,6 +5,8 @@ from typing import List
 import pdfplumber
 
 from .text_utils import (
+    first_non_empty_index,
+    last_non_empty_index,
     looks_like_page_number,
     merge_lines,
     should_merge_lines,
@@ -35,32 +37,8 @@ def merge_page_texts(page_texts: List[str]) -> str:
 
     if not lines:
         return ""
-
-    merged: list[str] = []
-    i = 0
-    while i < len(lines):
-        line = lines[i].rstrip()
-        if not line.strip():
-            merged.append("")
-            i += 1
-            continue
-
-        current = line
-        while i + 1 < len(lines):
-            if not lines[i + 1].strip():
-                break
-            next_line = lines[i + 1].lstrip()
-            if looks_like_page_number(current):
-                break
-            if not should_merge_lines(current, next_line):
-                break
-            current = merge_lines(current, next_line)
-            i += 1
-        merged.append(current)
-        i += 1
-
-    merged_text = "\n".join(merged).strip("\n")
-    return merged_text
+    merged = _merge_lines(lines)
+    return "\n".join(merged).strip("\n")
 
 
 def normalize_page_texts(page_texts: List[str]) -> List[str]:
@@ -68,8 +46,8 @@ def normalize_page_texts(page_texts: List[str]) -> List[str]:
     lines_by_page = [page.split("\n") for page in pages]
 
     for index in range(len(lines_by_page) - 1):
-        last_idx = _last_non_empty_index(lines_by_page[index])
-        next_idx = _first_non_empty_index(lines_by_page[index + 1])
+        last_idx = last_non_empty_index(lines_by_page[index])
+        next_idx = first_non_empty_index(lines_by_page[index + 1])
         if last_idx is None or next_idx is None:
             continue
         if last_idx < len(lines_by_page[index]) - 1:
@@ -104,6 +82,11 @@ def normalize_page_texts(page_texts: List[str]) -> List[str]:
 
 def _merge_lines_in_text(text: str) -> str:
     lines = text.replace("\r\n", "\n").split("\n")
+    merged = _merge_lines(lines)
+    return "\n".join(merged).strip("\n")
+
+
+def _merge_lines(lines: list[str]) -> list[str]:
     merged: list[str] = []
     i = 0
     while i < len(lines):
@@ -126,18 +109,5 @@ def _merge_lines_in_text(text: str) -> str:
             i += 1
         merged.append(current)
         i += 1
-    return "\n".join(merged).strip("\n")
+    return merged
 
-
-def _first_non_empty_index(lines: List[str]) -> int | None:
-    for idx, line in enumerate(lines):
-        if line.strip():
-            return idx
-    return None
-
-
-def _last_non_empty_index(lines: List[str]) -> int | None:
-    for idx in range(len(lines) - 1, -1, -1):
-        if lines[idx].strip():
-            return idx
-    return None

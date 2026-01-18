@@ -54,7 +54,12 @@ class BaseProvider(TranslatorProvider):
 
     def _is_not_found(self, exc: Exception) -> bool:
         message = str(exc).lower()
-        return "not found" in message or "404" in message
+        if "model" in message and "not found" in message:
+            return True
+        status = getattr(exc, "status_code", None) or getattr(exc, "status", None)
+        if status == 404:
+            return True
+        return False
 
     @abstractmethod
     def _generate(self, prompt: str) -> str:
