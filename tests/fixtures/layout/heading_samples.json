@@ -1,0 +1,9 @@
+{
+  "samples": [
+    {
+      "id": "basic-headings",
+      "description": "Single-column headings with body text",
+      "expected_heading_ratio": 1.2
+    }
+  ]
+}

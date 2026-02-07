@@ -1,0 +1,8 @@
+{
+  "fixtures": [
+    {
+      "id": "layout-soft-basic",
+      "notes": "Baseline PDF with headings and paragraphs for layout soft regression"
+    }
+  ]
+}

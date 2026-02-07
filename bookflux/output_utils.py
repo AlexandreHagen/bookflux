@@ -1,8 +1,47 @@
 from __future__ import annotations
 
+import json
+from dataclasses import dataclass
+
 from reportlab.lib.pagesizes import letter
 from reportlab.pdfbase.pdfmetrics import stringWidth
 from reportlab.pdfgen import canvas
+
+
+@dataclass(frozen=True)
+class FormattingIssue:
+    page_number: int
+    issue_type: str
+    description: str
+    severity: str
+
+
+@dataclass(frozen=True)
+class FormattingIssueReport:
+    run_id: str
+    issues: list[FormattingIssue]
+    summary: dict[str, int]
+
+    def to_dict(self) -> dict[str, object]:
+        return {
+            "run_id": self.run_id,
+            "summary": dict(self.summary),
+            "issues": [
+                {
+                    "page_number": issue.page_number,
+                    "issue_type": issue.issue_type,
+                    "description": issue.description,
+                    "severity": issue.severity,
+                }
+                for issue in self.issues
+            ],
+        }
+
+
+def write_formatting_report(report: FormattingIssueReport, output_path: str) -> None:
+    payload = report.to_dict()
+    with open(output_path, "w", encoding="utf-8") as handle:
+        json.dump(payload, handle, indent=2, sort_keys=True)
 
 
 def _wrap_paragraph(text: str, max_width: float, font_name: str, font_size: int) -> list[str]:

@@ -10,7 +10,7 @@ from .layout_utils import (
     merge_block_page_breaks,
     write_pdf_layout,
 )
-from .output_utils import write_pdf, write_pdf_pages
+from .output_utils import write_formatting_report, write_pdf, write_pdf_pages
 from .pdf_utils import extract_text, merge_page_texts, normalize_page_texts
 from .providers import create_provider, list_providers
 from .translator import TranslatorFacade, chunk_text
@@ -84,6 +84,28 @@ def build_parser() -> argparse.ArgumentParser:
         choices=["none", "soft"],
         default="none",
         help="Preserve layout softly by reflowing text in detected blocks.",
+    )
+    parser.add_argument(
+        "--layout-report",
+        default=None,
+        help="Path to write layout formatting report (JSON) when using soft layout.",
+    )
+    parser.add_argument(
+        "--layout-warn-summary",
+        action=argparse.BooleanOptionalAction,
+        default=True,
+        help="Print a summary of layout formatting issues when using soft layout.",
+    )
+    parser.add_argument(
+        "--layout-overflow",
+        action="store_true",
+        help="Allow truncated blocks to overflow onto a new page (soft layout only).",
+    )
+    parser.add_argument(
+        "--layout-overflow-extra",
+        type=float,
+        default=0.0,
+        help="Extra vertical space (points) to allow before shrinking text in soft layout.",
     )
     parser.add_argument("--ocr", action="store_true", help="Enable OCR for scanned PDFs.")
     parser.add_argument("--ocr-lang", default="eng", help="OCR language code.")
@@ -268,7 +290,21 @@ def main() -> None:
                 break
 
         page_sizes = page_sizes[: len(translated_pages)]
-        write_pdf_layout(translated_pages, page_sizes, args.output)
+        report = write_pdf_layout(
+            translated_pages,
+            page_sizes,
+            args.output,
+            allow_page_overflow=args.layout_overflow,
+            overflow_extra=args.layout_overflow_extra,
+        )
+        if args.layout_report:
+            write_formatting_report(report, args.layout_report)
+        if args.layout_warn_summary and report.issues:
+            summary = ", ".join(f"{key}={count}" for key, count in report.summary.items())
+            print(
+                f"Layout soft formatting issues: {summary}.",
+                file=sys.stderr,
+            )
         return
 
     page_texts = extract_text(args.input, use_ocr=args.ocr, ocr_lang=args.ocr_lang)

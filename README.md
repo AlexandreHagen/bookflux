@@ -143,6 +143,26 @@ python -m bookflux \
   --lang fr \
   --layout soft
 ```
+Optional layout reporting:
+```bash
+python -m bookflux \
+  --input /path/to/book.pdf \
+  --output /path/to/book.fr.pdf \
+  --lang fr \
+  --layout soft \
+  --layout-report /tmp/layout-report.json \
+  --no-layout-warn-summary
+```
+Optional overflow handling (creates extra pages for overflow text):
+```bash
+python -m bookflux \
+  --input /path/to/book.pdf \
+  --output /path/to/book.fr.pdf \
+  --lang fr \
+  --layout soft \
+  --layout-overflow \
+  --layout-overflow-extra 24
+```
 
 ### Enable OCR (optional)
 ```bash

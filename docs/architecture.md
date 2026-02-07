@@ -44,7 +44,12 @@ Provider creation is handled in `bookflux/providers/registry.py` and used by the
 ## Output Rendering
 - `output_utils.write_pdf` renders merged translated text.
 - `output_utils.write_pdf_pages` preserves page boundaries.
-- `layout_utils.write_pdf_layout` renders into detected text blocks.
+- `layout_utils.write_pdf_layout` renders into detected text blocks with
+  heading-aware sizing and a minimum readable font size.
+- Soft layout runs can emit a formatting issue report to summarize truncation or
+  font scaling adjustments.
+- Soft layout can optionally overflow truncated blocks onto a new page.
+- Soft layout can allow extra vertical space before shrinking text.
 
 ## Flow Diagram
 
